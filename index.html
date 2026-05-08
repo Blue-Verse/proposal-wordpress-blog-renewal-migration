@@ -1,0 +1,851 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="워드프레스 블로그 리뉴얼 및 데이터 마이그레이션 — 프로젝트 제안서" />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+  <link href="https://cdn.jsdelivr.net/gh/sun-typeface/SUIT@2/fonts/variable/woff2/SUIT-Variable.css" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['SUIT Variable', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'monospace']
+          },
+          colors: {
+            brand: {
+              50: '#f0f9ff',
+              100: '#e0f2fe',
+              200: '#bae6fd',
+              600: '#0284c7',
+              700: '#0369a1'
+            }
+          },
+          boxShadow: {
+            soft: '0 10px 30px -18px rgba(15, 23, 42, 0.35)'
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    :root { color-scheme: light; font-size: 16px; }
+    body {
+      font-family: 'SUIT Variable', sans-serif;
+      font-size: 1rem;
+      background-image:
+        radial-gradient(circle at 12% 18%, rgba(14, 165, 233, 0.08), transparent 42%),
+        radial-gradient(circle at 88% 82%, rgba(2, 132, 199, 0.06), transparent 48%);
+    }
+    .doc-content h1, .doc-content h2, .doc-content h3, .doc-content h4 {
+      color: rgb(15 23 42); font-weight: 700; letter-spacing: -0.01em;
+      line-height: 1.3; margin-top: 1.6em; margin-bottom: 0.7em;
+    }
+    .doc-content h1 { font-size: 2rem; margin-top: 0.2em; }
+    .doc-content h2 { font-size: 1.4rem; }
+    .doc-content h3 { font-size: 1.15rem; }
+    .doc-content p, .doc-content li {
+      color: rgb(51 65 85); line-height: 1.8; font-size: 1rem;
+    }
+    .doc-content p, .doc-content ul, .doc-content ol,
+    .doc-content table, .doc-content pre, .doc-content blockquote {
+      margin-bottom: 1rem;
+    }
+    .doc-content ul, .doc-content ol { padding-left: 1.2rem; }
+    .doc-content ul { list-style: disc; }
+    .doc-content ol { list-style: decimal; }
+    .doc-content table {
+      width: 100%; border-collapse: collapse;
+      border: 1px solid rgb(226 232 240); border-radius: 0.75rem;
+      overflow: hidden; font-size: 1rem;
+    }
+    .doc-content th, .doc-content td {
+      border: 1px solid rgb(226 232 240); padding: 0.7rem 0.8rem;
+      text-align: left; vertical-align: top;
+    }
+    .doc-content th {
+      background: rgb(248 250 252); color: rgb(30 41 59); font-weight: 600;
+    }
+    .doc-content pre, .doc-content code {
+      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+    }
+    .doc-content pre {
+      background: rgb(15 23 42); color: rgb(226 232 240);
+      padding: 1rem; border-radius: 0.75rem; overflow-x: auto;
+      font-size: 1rem; line-height: 1.65;
+    }
+    .doc-content p code, .doc-content li code,
+    .doc-content td code, .doc-content th code {
+      background: rgb(241 245 249); color: rgb(15 23 42);
+      border: 1px solid rgb(226 232 240); border-radius: 0.4rem;
+      padding: 0.08rem 0.4rem; font-size: 1em;
+    }
+    .doc-content blockquote {
+      border-left: 3px solid rgb(14 165 233); padding-left: 0.85rem;
+      color: rgb(71 85 105); background: rgb(240 249 255);
+      border-radius: 0.5rem; padding-top: 0.55rem; padding-bottom: 0.55rem;
+    }
+    .text-xs { font-size: 1rem !important; }
+    .timeline { position: relative; padding-left: 2rem; }
+    .timeline::before {
+      content: ''; position: absolute; left: 0.6rem; top: 0.25rem; bottom: 0.25rem;
+      width: 2px; background: rgb(186 230 253);
+    }
+    .timeline-item { position: relative; margin-bottom: 1.75rem; }
+    .timeline-item::before {
+      content: ''; position: absolute; left: -1.65rem; top: 0.35rem;
+      width: 0.75rem; height: 0.75rem; border-radius: 50%;
+      background: rgb(2 132 199); border: 3px solid rgb(224 242 254);
+    }
+    .page-section { display: none; }
+    .page-section.active { display: block; }
+    #sidebar-backdrop { display: none; }
+    #sidebar-backdrop.open { display: block; }
+    @media (max-width: 1023px) {
+      #sidebar { transform: translateX(-100%); transition: transform 0.2s ease; position: fixed; top: 0; left: 0; z-index: 40; height: 100vh; width: 80vw; max-width: 320px; }
+      #sidebar.open { transform: translateX(0); }
+    }
+  </style>
+  <title>워드프레스 블로그 리뉴얼 및 데이터 마이그레이션 — 프로젝트 제안서</title>
+</head>
+<body class="text-slate-800 font-sans antialiased">
+  <div class="mx-auto max-w-7xl px-4 py-6 md:px-8 md:py-10">
+
+    <!-- Header -->
+    <header class="mb-6 rounded-2xl border border-slate-200/70 bg-white/85 px-5 py-3 shadow-soft backdrop-blur">
+      <div class="flex flex-wrap items-center gap-3">
+        <button id="sidebar-toggle" class="lg:hidden inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1 text-sm font-medium text-slate-700 hover:border-sky-300 hover:text-sky-700">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+          메뉴
+        </button>
+        <a href="#home" class="inline-flex items-center shrink-0 text-sm font-bold tracking-tight text-slate-800">
+          프로젝트 제안서
+        </a>
+        <div class="hidden sm:block ml-auto text-right">
+          <p class="text-sm font-semibold tracking-[0.04em] text-sky-700/90">워드프레스 블로그 리뉴얼 및 데이터 마이그레이션</p>
+          <p class="text-xs text-slate-400">프로젝트 제안서</p>
+        </div>
+      </div>
+    </header>
+
+    <div class="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
+
+      <!-- Sidebar -->
+      <div id="sidebar-backdrop" class="fixed inset-0 bg-black/30 z-30 lg:hidden" onclick="closeSidebar()"></div>
+      <aside id="sidebar" class="rounded-2xl border border-slate-200/70 bg-white/90 p-4 shadow-soft backdrop-blur lg:sticky lg:top-6 lg:h-[calc(100vh-4rem)] lg:overflow-auto">
+        <nav id="nav" class="space-y-1">
+          <a href="#home" data-page="home" class="nav-link block rounded-xl border px-3 py-2 text-sm border-sky-200 bg-sky-50 font-medium text-sky-700">홈</a>
+          <div class="my-3 border-t border-slate-200"></div>
+          <p class="mb-2 mt-1 px-1 text-sm font-semibold tracking-[0.14em] text-slate-400">제안서</p>
+          <a href="#overview" data-page="overview" class="nav-link block rounded-xl border border-transparent px-3 py-2 text-sm text-slate-600 hover:border-slate-200 hover:bg-slate-50 hover:text-slate-900">프로젝트 소개</a>
+          <a href="#estimate" data-page="estimate" class="nav-link block rounded-xl border border-transparent px-3 py-2 text-sm text-slate-600 hover:border-slate-200 hover:bg-slate-50 hover:text-slate-900">견적서</a>
+          <a href="#manday" data-page="manday" class="nav-link block rounded-xl border border-transparent px-3 py-2 text-sm text-slate-600 hover:border-slate-200 hover:bg-slate-50 hover:text-slate-900">공수계산서</a>
+          <a href="#prd" data-page="prd" class="nav-link block rounded-xl border border-transparent px-3 py-2 text-sm text-slate-600 hover:border-slate-200 hover:bg-slate-50 hover:text-slate-900">PRD</a>
+          <div class="my-3 border-t border-slate-200"></div>
+          <p class="mb-2 mt-1 px-1 text-sm font-semibold tracking-[0.14em] text-slate-400">일정 & 경험</p>
+          <a href="#timeline" data-page="timeline" class="nav-link block rounded-xl border border-transparent px-3 py-2 text-sm text-slate-600 hover:border-slate-200 hover:bg-slate-50 hover:text-slate-900">일정 제안</a>
+          <a href="#portfolio" data-page="portfolio" class="nav-link block rounded-xl border border-transparent px-3 py-2 text-sm text-slate-600 hover:border-slate-200 hover:bg-slate-50 hover:text-slate-900">유사 프로젝트 경험</a>
+        </nav>
+      </aside>
+
+      <!-- Main Content -->
+      <main class="min-w-0">
+
+        <!-- PAGE: Home -->
+        <div id="page-home" class="page-section active space-y-6">
+          <div class="rounded-2xl border border-slate-200/70 bg-white/95 p-6 shadow-soft backdrop-blur md:p-8">
+            <p class="mb-2 text-xs font-semibold tracking-[0.2em] text-sky-700/80">프로젝트 제안서</p>
+            <h1 class="text-2xl font-bold tracking-tight text-slate-900 md:text-3xl">워드프레스 블로그 리뉴얼 및 데이터 마이그레이션</h1>
+            <p class="mt-3 max-w-3xl text-sm leading-7 text-slate-600 md:text-base">PHP 7.0 → PHP 8.3 안전 이전, 1,150건 포스팅 무손실 마이그레이션, SEO 연속성 100% 보존(301 리다이렉트맵 + 메타 태그 이관), AI 검색 엔진 대응 AIEO(JSON-LD Schema) 구조 설계까지 한 번에 수행합니다.</p>
+            <div class="mt-4 flex flex-wrap items-center gap-2">
+              <span class="inline-flex rounded-full border border-sky-200 bg-sky-100 px-2.5 py-1 text-sm font-semibold tracking-[0.12em] text-sky-700">2,700,000원 (VAT 별도)</span>
+              <span class="inline-flex rounded-full border border-sky-200 bg-sky-100 px-2.5 py-1 text-sm font-semibold tracking-[0.12em] text-sky-700">30일</span>
+              <span class="inline-flex rounded-full border border-amber-200 bg-amber-100 px-2.5 py-1 text-sm font-semibold tracking-[0.12em] text-amber-700">웹 · 워드프레스 구축</span>
+              <a href="https://www.wishket.com/project/155145/" target="_blank" rel="noopener noreferrer"
+                 class="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-sm font-medium text-slate-500 transition hover:border-sky-300 hover:text-sky-700">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                원본 공고
+              </a>
+            </div>
+          </div>
+
+          <!-- Summary cards -->
+          <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <a href="#overview" class="group rounded-2xl border border-slate-200/70 bg-white/90 p-5 shadow-soft transition hover:-translate-y-0.5 hover:border-sky-200 hover:bg-white">
+              <div class="mb-3 inline-flex rounded-full border px-2.5 py-1 text-sm font-semibold tracking-[0.12em] bg-sky-100 text-sky-700 border-sky-200">소개</div>
+              <h2 class="text-lg font-semibold tracking-tight text-slate-900 group-hover:text-sky-700">프로젝트 소개</h2>
+              <p class="mt-2 text-sm leading-7 text-slate-600">프로젝트 분석, 핵심 요구사항 정리, 제안 포인트</p>
+            </a>
+            <a href="#estimate" class="group rounded-2xl border border-slate-200/70 bg-white/90 p-5 shadow-soft transition hover:-translate-y-0.5 hover:border-sky-200 hover:bg-white">
+              <div class="mb-3 inline-flex rounded-full border px-2.5 py-1 text-sm font-semibold tracking-[0.12em] bg-sky-100 text-sky-700 border-sky-200">비용</div>
+              <h2 class="text-lg font-semibold tracking-tight text-slate-900 group-hover:text-sky-700">견적서</h2>
+              <p class="mt-2 text-sm leading-7 text-slate-600">항목별 비용 산출 근거 및 상세 견적</p>
+            </a>
+            <a href="#manday" class="group rounded-2xl border border-slate-200/70 bg-white/90 p-5 shadow-soft transition hover:-translate-y-0.5 hover:border-sky-200 hover:bg-white">
+              <div class="mb-3 inline-flex rounded-full border px-2.5 py-1 text-sm font-semibold tracking-[0.12em] bg-sky-100 text-sky-700 border-sky-200">공수</div>
+              <h2 class="text-lg font-semibold tracking-tight text-slate-900 group-hover:text-sky-700">공수계산서</h2>
+              <p class="mt-2 text-sm leading-7 text-slate-600">기능별 개발 공수(man-day) 산출 내역</p>
+            </a>
+            <a href="#prd" class="group rounded-2xl border border-slate-200/70 bg-white/90 p-5 shadow-soft transition hover:-translate-y-0.5 hover:border-sky-200 hover:bg-white">
+              <div class="mb-3 inline-flex rounded-full border px-2.5 py-1 text-sm font-semibold tracking-[0.12em] bg-amber-100 text-amber-700 border-amber-200">기획</div>
+              <h2 class="text-lg font-semibold tracking-tight text-slate-900 group-hover:text-sky-700">PRD</h2>
+              <p class="mt-2 text-sm leading-7 text-slate-600">기능 요구사항 정의서, 사용자 스토리, 기술 제약</p>
+            </a>
+            <a href="#timeline" class="group rounded-2xl border border-slate-200/70 bg-white/90 p-5 shadow-soft transition hover:-translate-y-0.5 hover:border-sky-200 hover:bg-white">
+              <div class="mb-3 inline-flex rounded-full border px-2.5 py-1 text-sm font-semibold tracking-[0.12em] bg-amber-100 text-amber-700 border-amber-200">일정</div>
+              <h2 class="text-lg font-semibold tracking-tight text-slate-900 group-hover:text-sky-700">일정 제안</h2>
+              <p class="mt-2 text-sm leading-7 text-slate-600">단계별 마일스톤 및 산출물 일정표</p>
+            </a>
+            <a href="#portfolio" class="group rounded-2xl border border-slate-200/70 bg-white/90 p-5 shadow-soft transition hover:-translate-y-0.5 hover:border-sky-200 hover:bg-white">
+              <div class="mb-3 inline-flex rounded-full border px-2.5 py-1 text-sm font-semibold tracking-[0.12em] bg-amber-100 text-amber-700 border-amber-200">경험</div>
+              <h2 class="text-lg font-semibold tracking-tight text-slate-900 group-hover:text-sky-700">유사 프로젝트 경험</h2>
+              <p class="mt-2 text-sm leading-7 text-slate-600">유사 프로젝트 수행 경험 및 기술 스택</p>
+            </a>
+          </div>
+
+          <!-- Quick stats -->
+          <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
+            <div class="rounded-2xl border border-slate-200/70 bg-white/90 p-4 text-center shadow-soft backdrop-blur">
+              <p class="text-2xl font-bold text-sky-700">1,150건</p>
+              <p class="mt-1 text-xs text-slate-500">무손실 이관 대상 포스팅</p>
+            </div>
+            <div class="rounded-2xl border border-slate-200/70 bg-white/90 p-4 text-center shadow-soft backdrop-blur">
+              <p class="text-2xl font-bold text-sky-700">301</p>
+              <p class="mt-1 text-xs text-slate-500">리다이렉트 보존</p>
+            </div>
+            <div class="rounded-2xl border border-slate-200/70 bg-white/90 p-4 text-center shadow-soft backdrop-blur">
+              <p class="text-2xl font-bold text-sky-700">PHP 8.3</p>
+              <p class="mt-1 text-xs text-slate-500">최신 환경 이전</p>
+            </div>
+            <div class="rounded-2xl border border-slate-200/70 bg-white/90 p-4 text-center shadow-soft backdrop-blur">
+              <p class="text-2xl font-bold text-sky-700">JSON-LD</p>
+              <p class="mt-1 text-xs text-slate-500">AIEO 구조화 데이터</p>
+            </div>
+          </div>
+
+          <!-- CTA -->
+          <div class="rounded-2xl border border-sky-200/70 bg-gradient-to-br from-sky-50 to-brand-50 p-6 text-center shadow-soft md:p-10">
+            <h2 class="text-xl font-bold tracking-tight text-slate-900 md:text-2xl">함께 만들어 가겠습니다</h2>
+            <p class="mx-auto mt-3 max-w-lg text-sm leading-7 text-slate-600">각 메뉴를 클릭하시면 상세 내용을 확인하실 수 있습니다.</p>
+          </div>
+        </div>
+
+        <!-- PAGE: 프로젝트 소개 -->
+        <div id="page-overview" class="page-section space-y-6">
+          <div class="rounded-2xl border border-slate-200/70 bg-white/95 p-5 shadow-soft backdrop-blur md:p-8">
+            <article class="doc-content">
+              <h1>프로젝트 소개</h1>
+              <blockquote>PHP 7.0 환경의 공식 워드프레스 블로그를 PHP 8.3 + 최신 코어 환경으로 안전하게 이전하고, 1,150건 콘텐츠와 SEO 자산을 손실 없이 보존하면서 AI 검색 시대에 맞는 AIEO 구조화 데이터까지 적용하는 전면 리뉴얼 프로젝트입니다.</blockquote>
+
+              <h2>프로젝트 개요</h2>
+              <table>
+                <tr><th>항목</th><th>내용</th></tr>
+                <tr><td>프로젝트명</td><td><a href="https://www.wishket.com/project/155145/" target="_blank" rel="noopener noreferrer" class="text-sky-700 underline decoration-sky-300 hover:decoration-sky-500">워드프레스 블로그 리뉴얼 및 데이터 마이그레이션</a></td></tr>
+                <tr><td>카테고리</td><td>웹 · 워드프레스 구축 (운영 중인 서비스 리뉴얼)</td></tr>
+                <tr><td>제안 금액</td><td>2,700,000원 (VAT 별도)</td></tr>
+                <tr><td>제안 기간</td><td>30일 (계약 체결 이후 즉시 시작)</td></tr>
+                <tr><td>핵심 기술</td><td>WordPress 최신 코어, PHP 8.3, MySQL, Linux, JSON-LD Schema, 301 리다이렉트, Lazy Load</td></tr>
+              </table>
+
+              <h2>핵심 요구사항 분석</h2>
+              <ul>
+                <li><strong>인프라 고도화</strong> — 보안 지원 종료된 PHP 7.0 환경에서 PHP 8.3 + 최신 워드프레스 코어로 안전 이전, 서버 보안 설정 및 DB 튜닝</li>
+                <li><strong>버전 점프 트러블슈팅</strong> — PHP 7.x → 8.x 이전 시 발생하는 Deprecated/Removed 함수, 플러그인·테마 충돌 디버깅 및 리팩토링</li>
+                <li><strong>1,150건 데이터 정밀 마이그레이션</strong> — 리비전·스팸 댓글 등 더미 데이터 DB 클리닝 후 본문·미디어 라이브러리 무손실 이관</li>
+                <li><strong>본문 정규식 일괄 치환</strong> — 하드코딩된 구형 도메인 및 절대경로 이미지를 신규 환경에 맞게 일괄 최적화</li>
+                <li><strong>SEO 연속성 100% 보존</strong> — URL 구조 분석 → 301 영구 리다이렉트맵 → 메타 태그(Title/Description) 무손실 이관 → 트래픽 손실 방지</li>
+                <li><strong>AIEO 구조화 데이터 적용</strong> — JSON-LD 기반 Schema Markup(Article, BreadcrumbList, Organization) 템플릿화로 AI 검색 엔진 노출 최적화</li>
+                <li><strong>브랜드 가이드 기반 반응형 테마</strong> — PC/태블릿/모바일 반응형 퍼블리싱, 이미지 Lazy Load 등 퍼포먼스 최적화</li>
+                <li><strong>관리자 매뉴얼</strong> — 실무 담당자를 위한 포스팅 및 기본 관리 매뉴얼 제공</li>
+              </ul>
+
+              <h2>제안 포인트</h2>
+              <h3>1. 4단계 무손실 마이그레이션 프로세스</h3>
+              <p>① <strong>DB 클리닝</strong>(리비전, 스팸 댓글, 만료 트랜지언트 정리) → ② <strong>스테이징 마이그레이션</strong>(WP-CLI + 정규식 본문 치환 + 미디어 라이브러리 sync) → ③ <strong>정합성 검증</strong>(체크섬 + 1,150건 무작위 샘플 검수) → ④ <strong>운영 컷오버</strong>(DNS TTL 단축, 무중단 전환). 1순위인 산출물 완성도를 최우선으로 보장합니다.</p>
+
+              <h3>2. SEO 연속성 100% 보존 — 트래픽 손실 ZERO 목표</h3>
+              <p>리뉴얼 전/후 URL을 1:1로 매핑하여 <strong>301 영구 리다이렉트맵</strong>을 구성합니다. 메타 태그(Title, Description)와 정규 URL(canonical), 사이트맵을 신규 환경으로 무손실 이관하고, Search Console과 Bing Webmaster Tools에 신규 사이트맵을 등록하여 인덱싱 회귀를 모니터링합니다.</p>
+
+              <h3>3. AIEO 시대 대응 — JSON-LD Schema 템플릿화</h3>
+              <p>Article, BreadcrumbList, Organization, WebSite 등 핵심 Schema.org 타입을 <strong>테마 레벨에서 템플릿화</strong>하여, 신규 작성되는 포스트에도 자동으로 구조화 데이터가 주입되도록 설계합니다. Google Rich Results Test와 Schema Markup Validator로 전수 검증합니다.</p>
+
+              <h3>4. PHP 7.0 → 8.3 트러블슈팅 노하우</h3>
+              <p>PHP 8.x에서 Removed/Deprecated된 함수(<code>each()</code>, <code>create_function()</code>, <code>mysql_*</code> 등)를 정적 분석 도구(PHPCompatibility, Rector)로 자동 스캔합니다. 플러그인 호환성 매트릭스를 작성하여 단계별 검증 후 적용하며, 호환되지 않는 플러그인은 동등 기능 대체안을 함께 제안합니다.</p>
+
+              <h3>5. 운영 중인 서비스 리뉴얼 경험</h3>
+              <p>운영 중인 핀테크 플랫폼의 UI/UX 전면 리뉴얼을 80+ 엔티티 규모로 수행한 경험을 기반으로, 데이터 연속성 보장과 무중단 전환에 대한 검증된 프로세스를 적용합니다. 자사 PM 2명과의 협업 환경에서 일일/주간 보고 체계를 정착시킵니다.</p>
+
+              <h2>사용 기술 및 툴</h2>
+              <h3>개발 기술</h3>
+              <div class="flex flex-wrap gap-2 not-prose mb-4">
+                <span class="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-sm font-medium text-sky-700">WordPress 6.x</span>
+                <span class="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-sm font-medium text-sky-700">PHP 8.3</span>
+                <span class="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-sm font-medium text-sky-700">MySQL</span>
+                <span class="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-sm font-medium text-sky-700">Linux (Nginx/Apache)</span>
+                <span class="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-sm font-medium text-sky-700">WP-CLI</span>
+                <span class="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-sm font-medium text-sky-700">HTML5/CSS3/SCSS</span>
+                <span class="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-sm font-medium text-sky-700">JavaScript</span>
+                <span class="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-sm font-medium text-sky-700">JSON-LD Schema</span>
+                <span class="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-sm font-medium text-sky-700">Figma</span>
+              </div>
+              <h3>협업 및 커뮤니케이션</h3>
+              <div class="flex flex-wrap gap-2 not-prose">
+                <span class="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-sm font-medium text-amber-700">Slack / 카카오톡</span>
+                <span class="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-sm font-medium text-amber-700">Zoom / Google Meet</span>
+                <span class="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-sm font-medium text-amber-700">Notion / Google Docs</span>
+                <span class="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-sm font-medium text-amber-700">GitHub Issues</span>
+              </div>
+            </article>
+          </div>
+        </div>
+
+        <!-- PAGE: 견적서 -->
+        <div id="page-estimate" class="page-section space-y-6">
+          <div class="rounded-2xl border border-slate-200/70 bg-white/95 p-5 shadow-soft backdrop-blur md:p-8">
+            <article class="doc-content">
+              <h1>견적서</h1>
+              <blockquote>본 견적서는 RFP 요구사항(인프라 이전 + 1,150건 마이그레이션 + SEO/AIEO + UI/UX) 분석을 기반으로 산출되었습니다.</blockquote>
+
+              <h2>견적 요약</h2>
+              <table>
+                <tr><th>항목</th><th>내용</th></tr>
+                <tr><td>프로젝트명</td><td>워드프레스 블로그 리뉴얼 및 데이터 마이그레이션</td></tr>
+                <tr><td>제안 금액</td><td><strong>2,700,000원 (VAT 별도)</strong></td></tr>
+                <tr><td>제안 기간</td><td>30일</td></tr>
+                <tr><td>견적 유효기간</td><td>제안일로부터 30일</td></tr>
+              </table>
+
+              <h2>상세 견적 내역</h2>
+              <table>
+                <thead>
+                  <tr><th>구분</th><th>항목</th><th>수량</th><th>단가</th><th>금액</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>인프라</td><td>PHP 8.3 + 최신 WP 코어 환경 구축, 서버 보안, DB 튜닝</td><td>1식</td><td>-</td><td>400,000원</td></tr>
+                  <tr><td>BE 개발</td><td>PHP 7.0 → 8.3 디버깅·리팩토링, 플러그인 호환성 정비</td><td>1식</td><td>-</td><td>500,000원</td></tr>
+                  <tr><td>데이터</td><td>1,150건 + 미디어 라이브러리 마이그레이션 (DB 클리닝 + 정규식 치환)</td><td>1식</td><td>-</td><td>500,000원</td></tr>
+                  <tr><td>SEO/AIEO</td><td>301 리다이렉트맵 + 메타 태그 이관 + JSON-LD Schema 템플릿</td><td>1식</td><td>-</td><td>400,000원</td></tr>
+                  <tr><td>디자인</td><td>UI/UX 테마 디자인 (브랜드 가이드 반영) — Figma</td><td>1식</td><td>-</td><td>400,000원</td></tr>
+                  <tr><td>FE 개발</td><td>반응형 테마 퍼블리싱 + Lazy Load 등 퍼포먼스 최적화</td><td>1식</td><td>-</td><td>300,000원</td></tr>
+                  <tr><td>QA/배포</td><td>마이그레이션 검수, 컷오버, 관리자 매뉴얼</td><td>1식</td><td>-</td><td>200,000원</td></tr>
+                </tbody>
+                <tfoot>
+                  <tr><th colspan="4">합계 (VAT 별도)</th><th>2,700,000원</th></tr>
+                </tfoot>
+              </table>
+
+              <h2>산정 근거</h2>
+              <ul>
+                <li>클라이언트 예상 금액(3,000,000원) 대비 경쟁력 있는 금액으로 산정 (2순위 "금액" 충족)</li>
+                <li>1순위 "산출물 완성도"를 위해 SEO/AIEO 및 데이터 마이그레이션 항목에 가장 큰 비중 배정</li>
+                <li>유사 프로젝트(MySQL 대규모 마이그레이션, 운영 중인 서비스 리뉴얼) 수행 경험 기반 효율적 개발</li>
+                <li>인프라 + BE + 데이터 + SEO/AIEO + 디자인 + FE + QA까지 올인원 제공</li>
+                <li>1개월 무상 하자 보수 포함</li>
+              </ul>
+
+              <h2>포함 사항</h2>
+              <ul>
+                <li>웹사이트 디자인 원본 파일 (Figma)</li>
+                <li>개발 소스 코드 및 신규 테마 파일</li>
+                <li>최종 이관 완료된 DB 백업 파일 (마이그레이션 전/후 스냅샷 포함)</li>
+                <li>관리자 매뉴얼 (포스팅 작성, 미디어 업로드, 기본 관리 방법)</li>
+                <li>301 리다이렉트맵 (CSV) 및 적용 결과 리포트</li>
+                <li>JSON-LD Schema 검증 리포트 (Google Rich Results Test 결과)</li>
+                <li>1개월 무상 하자 보수</li>
+                <li>배포 환경 세팅 (1회)</li>
+              </ul>
+
+              <h2>불포함 사항</h2>
+              <ul>
+                <li>서버 호스팅 비용 (기존 호스팅 유지 또는 신규 계약)</li>
+                <li>도메인 구매/갱신 비용</li>
+                <li>유료 플러그인/테마 라이선스 비용 (필요 시 별도 협의)</li>
+                <li>외부 유료 API 사용 비용</li>
+                <li>이미지/콘텐츠 제작비 (클라이언트 제공 기준)</li>
+                <li>하자 보수 기간 이후 유지보수</li>
+              </ul>
+            </article>
+          </div>
+        </div>
+
+        <!-- PAGE: 공수계산서 -->
+        <div id="page-manday" class="page-section space-y-6">
+          <div class="rounded-2xl border border-slate-200/70 bg-white/95 p-5 shadow-soft backdrop-blur md:p-8">
+            <article class="doc-content">
+              <h1>공수계산서</h1>
+              <blockquote>기능별 개발 공수(Man-Day)를 산출하여 일정과 비용의 근거를 제시합니다.</blockquote>
+
+              <h2>공수 요약</h2>
+              <table>
+                <tr><th>구분</th><th>공수 (M/D)</th><th>비율</th></tr>
+                <tr><td>기획/설계</td><td>2.5</td><td>12%</td></tr>
+                <tr><td>인프라 + BE (PHP 디버깅, 데이터 마이그레이션)</td><td>7.5</td><td>35%</td></tr>
+                <tr><td>SEO / AIEO (리다이렉트맵, 메타 이관, Schema)</td><td>2.0</td><td>9%</td></tr>
+                <tr><td>디자인 (Figma)</td><td>4.0</td><td>19%</td></tr>
+                <tr><td>FE 개발 (테마 퍼블리싱, 반응형, 성능)</td><td>3.5</td><td>16%</td></tr>
+                <tr><td>QA/배포/매뉴얼</td><td>2.0</td><td>9%</td></tr>
+                <tr><th>합계</th><th>21.5 M/D</th><th>100%</th></tr>
+              </table>
+
+              <h2>기능별 상세 공수</h2>
+              <table>
+                <thead>
+                  <tr><th>구분</th><th>세부 작업</th><th>담당</th><th>공수 (M/D)</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>기획/설계</td><td>요구사항 분석, URL 매핑, 마이그레이션 플랜</td><td>기획</td><td>2.5</td></tr>
+                  <tr><td rowspan="4">인프라 + BE</td><td>PHP 8.3 + 최신 WP 코어 환경 구축, 서버 보안, DB 튜닝</td><td>BE</td><td>2.0</td></tr>
+                  <tr><td>PHP 7.0 → 8.3 Deprecated/Removed 자동 스캔 + 플러그인 호환성 리팩토링</td><td>BE</td><td>2.0</td></tr>
+                  <tr><td>DB 클리닝 (리비전, 스팸, 만료 트랜지언트) + 1,150건 + 미디어 라이브러리 sync</td><td>BE</td><td>2.5</td></tr>
+                  <tr><td>본문 도메인/절대경로 정규식 일괄 치환</td><td>BE</td><td>1.0</td></tr>
+                  <tr><td rowspan="3">SEO/AIEO</td><td>301 영구 리다이렉트맵 설계 및 적용</td><td>BE</td><td>1.0</td></tr>
+                  <tr><td>메타 태그 (Title, Description, canonical) 무손실 이관</td><td>BE</td><td>0.5</td></tr>
+                  <tr><td>JSON-LD Schema (Article, Breadcrumb, Organization) 템플릿화</td><td>FE/BE</td><td>0.5</td></tr>
+                  <tr><td rowspan="2">디자인</td><td>브랜드 가이드 기반 메인+서브 페이지 디자인</td><td>디자인</td><td>2.5</td></tr>
+                  <tr><td>반응형 (PC/태블릿/모바일) 디자인</td><td>디자인</td><td>1.5</td></tr>
+                  <tr><td rowspan="2">FE 개발</td><td>테마 퍼블리싱 (HTML/CSS/JS, 카테고리/태그/검색)</td><td>FE</td><td>2.5</td></tr>
+                  <tr><td>이미지 Lazy Load, 캐싱, Core Web Vitals 최적화</td><td>FE</td><td>1.0</td></tr>
+                  <tr><td rowspan="3">QA/배포</td><td>마이그레이션 검수 (체크섬 + 1,150건 무작위 샘플)</td><td>QA</td><td>1.0</td></tr>
+                  <tr><td>운영 컷오버 (DNS, 백업, Search Console 등록)</td><td>QA/BE</td><td>0.5</td></tr>
+                  <tr><td>관리자 매뉴얼 작성 (포스팅, 미디어, 기본 관리)</td><td>기획</td><td>0.5</td></tr>
+                </tbody>
+              </table>
+
+              <h2>산정 기준</h2>
+              <ul>
+                <li>1 M/D = 8시간 기준 (1인 1일 작업량)</li>
+                <li>주 5일 근무 기준 + 주말 보정 적용 시 약 30일 (캘린더 기준)</li>
+                <li>버퍼 10~15% 포함</li>
+                <li>유사 프로젝트(MySQL 대규모 마이그레이션, 운영 중 서비스 리뉴얼) 수행 경험 기반 효율적 개발</li>
+              </ul>
+            </article>
+          </div>
+        </div>
+
+        <!-- PAGE: PRD -->
+        <div id="page-prd" class="page-section space-y-6">
+          <div class="rounded-2xl border border-slate-200/70 bg-white/95 p-5 shadow-soft backdrop-blur md:p-8">
+            <article class="doc-content">
+              <h1>PRD (Product Requirements Document)</h1>
+              <blockquote>프로젝트 요구사항을 정의하고 기능 범위를 명확히 합니다.</blockquote>
+
+              <h2>1. 프로젝트 배경 및 목적</h2>
+              <p>현재 운영 중인 공식 워드프레스 블로그가 보안 지원이 종료된 PHP 7.0 환경에서 구동되고 있어 인프라 고도화가 시급합니다. 단순 디자인 리뉴얼을 넘어 최신 워드프레스 코어 + PHP 8.3 환경으로 이전하고, 1,150건 포스팅을 손실 없이 이관하는 것이 핵심 목표입니다. 동시에 트래픽 손실 방지를 위한 SEO 연속성 보장과 AI 검색 엔진 대응 AIEO 구조 설계를 함께 수행합니다.</p>
+
+              <h2>2. 사용자 정의</h2>
+              <table>
+                <thead>
+                  <tr><th>사용자 유형</th><th>설명</th><th>주요 기능</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>방문자 (독자)</td><td>블로그 콘텐츠 소비자</td><td>포스트 검색·열람, 카테고리·태그 탐색, 반응형 모바일 열람</td></tr>
+                  <tr><td>실무 운영자</td><td>콘텐츠 발행 담당자</td><td>포스팅 작성/수정, 미디어 업로드, 카테고리·태그 관리</td></tr>
+                  <tr><td>관리자</td><td>시스템 전체 관리</td><td>플러그인·테마 관리, 사용자 관리, 백업, Search Console 모니터링</td></tr>
+                  <tr><td>검색 엔진 / AI 크롤러</td><td>Google, Bing, ChatGPT, Perplexity 등</td><td>JSON-LD Schema 인식, 사이트맵 크롤링, 301 리다이렉트 추종</td></tr>
+                </tbody>
+              </table>
+
+              <h2>3. 기능 요구사항</h2>
+              <h3>3.1 인프라 및 환경 세팅</h3>
+              <ul>
+                <li><strong>[필수]</strong> 서버 이전 지원 (PHP 8.3, 최신 WP 코어, MySQL 호환성 점검)</li>
+                <li><strong>[필수]</strong> 서버 보안 설정 (HTTPS 강제, 보안 헤더, wp-config 강화, 파일 권한 정비)</li>
+                <li><strong>[필수]</strong> DB 튜닝 (인덱스 점검, 옵션 테이블 정리, 트랜지언트 클린업)</li>
+              </ul>
+
+              <h3>3.2 PHP 7.0 → 8.3 디버깅 및 리팩토링</h3>
+              <ul>
+                <li><strong>[필수]</strong> Deprecated/Removed 함수 자동 스캔 (PHPCompatibility, Rector)</li>
+                <li><strong>[필수]</strong> 플러그인·테마 호환성 매트릭스 작성 및 단계별 검증</li>
+                <li><strong>[필수]</strong> 비호환 플러그인의 동등 기능 대체 또는 패치</li>
+                <li><strong>[필수]</strong> WP_DEBUG 모드에서 에러 로그 0건 달성</li>
+              </ul>
+
+              <h3>3.3 1,150건 데이터 정밀 마이그레이션</h3>
+              <ul>
+                <li><strong>[필수]</strong> 리비전, 스팸 댓글, 만료 트랜지언트 등 더미 데이터 DB 클리닝</li>
+                <li><strong>[필수]</strong> 본문 + 미디어 라이브러리 (이미지, 첨부파일) 무손실 이관</li>
+                <li><strong>[필수]</strong> 본문 내 하드코딩된 구형 도메인/절대경로 이미지 정규식 일괄 치환</li>
+                <li><strong>[필수]</strong> 1,150건 무작위 샘플 검수 + 체크섬 검증</li>
+              </ul>
+
+              <h3>3.4 SEO 연속성 보존</h3>
+              <ul>
+                <li><strong>[필수]</strong> 리뉴얼 전/후 URL 1:1 매핑 분석 → 301 영구 리다이렉트맵</li>
+                <li><strong>[필수]</strong> 메타 태그 (Title, Description) 무손실 이관</li>
+                <li><strong>[필수]</strong> 정규 URL (canonical), Open Graph, Twitter Card 점검</li>
+                <li><strong>[필수]</strong> 사이트맵 (sitemap.xml) 신규 환경 등록 및 Search Console 제출</li>
+                <li><strong>[선택]</strong> 404 모니터링 및 후속 리다이렉트 추가</li>
+              </ul>
+
+              <h3>3.5 AIEO 구조화 데이터</h3>
+              <ul>
+                <li><strong>[필수]</strong> JSON-LD 기반 Schema Markup 적용 (Article, BreadcrumbList, Organization, WebSite)</li>
+                <li><strong>[필수]</strong> 테마 레벨 템플릿화로 신규 포스트 자동 적용</li>
+                <li><strong>[필수]</strong> Google Rich Results Test, Schema Markup Validator 전수 검증</li>
+              </ul>
+
+              <h3>3.6 UI/UX 디자인 및 반응형 퍼블리싱</h3>
+              <ul>
+                <li><strong>[필수]</strong> 브랜드 가이드 기반 신규 UI/UX 테마 디자인 또는 프리미엄 테마 커스터마이징</li>
+                <li><strong>[필수]</strong> PC/태블릿/모바일 반응형 (Responsive Web)</li>
+                <li><strong>[필수]</strong> 이미지 Lazy Load, 캐싱, Core Web Vitals 최적화</li>
+                <li><strong>[선택]</strong> 다크 모드, 폰트 가독성 최적화</li>
+              </ul>
+
+              <h3>3.7 관리자 매뉴얼</h3>
+              <ul>
+                <li><strong>[필수]</strong> 포스팅 작성/수정 가이드</li>
+                <li><strong>[필수]</strong> 미디어 업로드 및 카테고리·태그 관리 가이드</li>
+                <li><strong>[필수]</strong> 기본 시스템 관리 (백업, 플러그인 업데이트, 사용자 관리)</li>
+              </ul>
+
+              <h2>4. 비기능 요구사항</h2>
+              <table>
+                <thead>
+                  <tr><th>항목</th><th>요구사항</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>성능</td><td>주요 페이지 LCP &lt; 2.5초, CLS &lt; 0.1, Lighthouse 성능 점수 85+ 목표</td></tr>
+                  <tr><td>보안</td><td>HTTPS 강제, 보안 헤더(HSTS, CSP, X-Content-Type-Options), wp-admin 접근 제어</td></tr>
+                  <tr><td>SEO</td><td>리뉴얼 전 인덱싱된 URL 100% 301 리다이렉트, 사이트맵 자동 갱신</td></tr>
+                  <tr><td>접근성</td><td>WCAG 2.1 AA 수준 (alt 속성, 키보드 네비게이션, 색 대비)</td></tr>
+                  <tr><td>호환성</td><td>최신 Chrome/Safari/Firefox/Edge, iOS Safari, Android Chrome</td></tr>
+                  <tr><td>가용성</td><td>마이그레이션 시점 다운타임 30분 이내 (DNS 컷오버 기준)</td></tr>
+                </tbody>
+              </table>
+
+              <h2>5. 기술 제약사항</h2>
+              <ul>
+                <li>WordPress 최신 코어 + PHP 8.3 + MySQL 환경 고정</li>
+                <li>Linux 서버 환경 가정 (Nginx 또는 Apache)</li>
+                <li>기존 운영 중인 워드프레스의 관리자 계정 및 서버/호스팅 접속 정보 클라이언트 제공 필수</li>
+                <li>현재 사용 중인 플러그인 중 PHP 8.x 비호환 항목은 동등 기능 대체 협의 필요</li>
+                <li>유료 플러그인/테마 라이선스가 필요한 경우 별도 협의</li>
+              </ul>
+
+              <h2>6. 범위 외 사항 (Out of Scope)</h2>
+              <ul>
+                <li>신규 콘텐츠(포스팅) 작성 및 번역</li>
+                <li>이미지/영상 등 새로운 미디어 자산 제작</li>
+                <li>회원/커뮤니티/전자상거래 등 신규 기능 추가 (별도 협의)</li>
+                <li>외부 시스템(CRM, ERP 등)과의 연동 (별도 협의)</li>
+                <li>하자 보수 기간(1개월) 이후의 유지보수</li>
+              </ul>
+            </article>
+          </div>
+        </div>
+
+        <!-- PAGE: 일정 제안 -->
+        <div id="page-timeline" class="page-section space-y-6">
+          <div class="rounded-2xl border border-slate-200/70 bg-white/95 p-5 shadow-soft backdrop-blur md:p-8">
+            <article class="doc-content">
+              <h1>일정 제안</h1>
+              <blockquote>총 30일 기준 단계별 마일스톤 및 산출물을 제안합니다. 1순위 "산출물 완성도" 충족을 위해 데이터 마이그레이션과 SEO 회귀 테스트에 충분한 검수 시간을 배분했습니다.</blockquote>
+
+              <h2>전체 일정 요약</h2>
+              <table>
+                <thead>
+                  <tr><th>단계</th><th>기간</th><th>주요 산출물</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>Phase 1: 분석 / 설계</td><td>Day 1–4</td><td>요구사항 정의서, URL 매핑 시트, 플러그인 호환성 매트릭스</td></tr>
+                  <tr><td>Phase 2: 환경 구축 / 디자인</td><td>Day 5–12</td><td>PHP 8.3 환경, 디자인 시안 (Figma)</td></tr>
+                  <tr><td>Phase 3: 마이그레이션 / 테마 개발</td><td>Day 13–24</td><td>스테이징 마이그레이션 완료, 신규 테마 (반응형)</td></tr>
+                  <tr><td>Phase 4: SEO/AIEO / QA / 컷오버</td><td>Day 25–30</td><td>301 리다이렉트맵, JSON-LD Schema, 운영 라이브 배포, 매뉴얼</td></tr>
+                </tbody>
+              </table>
+            </article>
+          </div>
+
+          <div class="rounded-2xl border border-slate-200/70 bg-white/95 p-5 shadow-soft backdrop-blur md:p-8">
+            <h2 class="mb-4 text-sm font-semibold tracking-[0.14em] text-slate-500">상세 타임라인</h2>
+            <div class="timeline">
+              <div class="timeline-item">
+                <p class="text-sm font-semibold tracking-[0.14em] text-sky-700">PHASE 1</p>
+                <h4 class="text-base font-semibold text-slate-900">분석 및 설계</h4>
+                <p class="mb-1 text-xs font-semibold text-amber-600">Day 1–4</p>
+                <p class="text-sm leading-7 text-slate-600">RFP 기반 상세 요구사항 분석, 운영 중인 사이트 진단(현재 PHP/플러그인/테마/DB 상태), URL 인벤토리 추출(1,150건), 신구 URL 매핑 룰 결정, 플러그인 호환성 매트릭스 작성</p>
+                <ul class="mt-2 list-disc pl-5 text-sm text-slate-500">
+                  <li>산출물: 요구사항 정의서, URL 매핑 시트, 플러그인 호환성 매트릭스, 마이그레이션 플랜</li>
+                </ul>
+              </div>
+              <div class="timeline-item">
+                <p class="text-sm font-semibold tracking-[0.14em] text-sky-700">PHASE 2</p>
+                <h4 class="text-base font-semibold text-slate-900">환경 구축 및 디자인</h4>
+                <p class="mb-1 text-xs font-semibold text-amber-600">Day 5–12</p>
+                <p class="text-sm leading-7 text-slate-600">PHP 8.3 + 최신 WP 코어 스테이징 환경 구축, 서버 보안 설정 및 DB 튜닝, PHP 7.0 → 8.3 Deprecated 스캔 및 코드 리팩토링, 브랜드 가이드 기반 UI/UX 디자인 (메인 + 서브 + 반응형)</p>
+                <ul class="mt-2 list-disc pl-5 text-sm text-slate-500">
+                  <li>산출물: 스테이징 환경, 호환성 검증 리포트, Figma 디자인 시안</li>
+                </ul>
+              </div>
+              <div class="timeline-item">
+                <p class="text-sm font-semibold tracking-[0.14em] text-sky-700">PHASE 3</p>
+                <h4 class="text-base font-semibold text-slate-900">마이그레이션 및 테마 개발</h4>
+                <p class="mb-1 text-xs font-semibold text-amber-600">Day 13–24</p>
+                <p class="text-sm leading-7 text-slate-600">DB 클리닝(리비전·스팸·만료 트랜지언트) → 1,150건 + 미디어 라이브러리 스테이징 마이그레이션 → 본문 도메인/절대경로 정규식 일괄 치환 → 신규 테마 퍼블리싱 (반응형, Lazy Load, Core Web Vitals 최적화)</p>
+                <ul class="mt-2 list-disc pl-5 text-sm text-slate-500">
+                  <li>산출물: 스테이징 마이그레이션 완료본, 신규 테마 (PC/태블릿/모바일)</li>
+                </ul>
+              </div>
+              <div class="timeline-item">
+                <p class="text-sm font-semibold tracking-[0.14em] text-sky-700">PHASE 4</p>
+                <h4 class="text-base font-semibold text-slate-900">SEO/AIEO 적용, QA, 컷오버</h4>
+                <p class="mb-1 text-xs font-semibold text-amber-600">Day 25–30</p>
+                <p class="text-sm leading-7 text-slate-600">301 영구 리다이렉트맵 적용, 메타 태그 무손실 이관 검증, JSON-LD Schema (Article, Breadcrumb, Organization) 템플릿 적용, Rich Results Test 전수 검증, 1,150건 무작위 샘플 검수, 운영 컷오버 (DNS TTL 단축 → 전환 → 모니터링), 관리자 매뉴얼 제공 및 교육</p>
+                <ul class="mt-2 list-disc pl-5 text-sm text-slate-500">
+                  <li>산출물: 라이브 배포 사이트, 301 리다이렉트맵 CSV, Schema 검증 리포트, 관리자 매뉴얼</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-slate-200/70 bg-white/95 p-5 shadow-soft backdrop-blur md:p-8">
+            <article class="doc-content">
+              <h2>마일스톤 체크포인트</h2>
+              <table>
+                <thead>
+                  <tr><th>마일스톤</th><th>시점</th><th>검수 기준</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>M1: 분석 완료</td><td>Day 4</td><td>URL 매핑 시트 + 마이그레이션 플랜 승인</td></tr>
+                  <tr><td>M2: 환경 + 디자인 확정</td><td>Day 12</td><td>스테이징 환경 정상 가동, Figma 시안 승인</td></tr>
+                  <tr><td>M3: 스테이징 마이그레이션 완료</td><td>Day 24</td><td>1,150건 무손실 검증, 신규 테마 반응형 검수</td></tr>
+                  <tr><td>M4: 운영 컷오버 + 매뉴얼</td><td>Day 30</td><td>301 적용 검증, Schema 통과, 관리자 매뉴얼 제공</td></tr>
+                </tbody>
+              </table>
+
+              <h2>커뮤니케이션 계획</h2>
+              <table>
+                <tr><th>항목</th><th>방식</th><th>주기</th></tr>
+                <tr><td>일일 진행 공유</td><td>Slack / 카카오톡 (자사 PM 2명 채널 포함)</td><td>매일</td></tr>
+                <tr><td>주간 미팅</td><td>Zoom / Google Meet</td><td>주 1회</td></tr>
+                <tr><td>마일스톤 리뷰</td><td>화면 공유 + 검수 체크리스트</td><td>단계 완료 시</td></tr>
+                <tr><td>이슈 트래킹</td><td>GitHub Issues / Notion</td><td>상시</td></tr>
+              </table>
+            </article>
+          </div>
+        </div>
+
+        <!-- PAGE: 포트폴리오 -->
+        <div id="page-portfolio" class="page-section space-y-6">
+          <div class="rounded-2xl border border-slate-200/70 bg-white/95 p-5 shadow-soft backdrop-blur md:p-8">
+            <article class="doc-content">
+              <h1>유사 프로젝트 경험</h1>
+              <blockquote>본 프로젝트와 유사한 데이터 마이그레이션·운영 중인 서비스 리뉴얼·대규모 콘텐츠 관리 경험을 소개합니다.</blockquote>
+            </article>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
+            <div class="rounded-2xl border border-slate-200/70 bg-white/90 p-4 text-center shadow-soft backdrop-blur">
+              <p class="text-2xl font-bold text-sky-700">13+</p>
+              <p class="mt-1 text-xs text-slate-500">완료 프로젝트</p>
+            </div>
+            <div class="rounded-2xl border border-slate-200/70 bg-white/90 p-4 text-center shadow-soft backdrop-blur">
+              <p class="text-2xl font-bold text-sky-700">7년+</p>
+              <p class="mt-1 text-xs text-slate-500">개발 경험</p>
+            </div>
+            <div class="rounded-2xl border border-slate-200/70 bg-white/90 p-4 text-center shadow-soft backdrop-blur">
+              <p class="text-2xl font-bold text-sky-700">100%</p>
+              <p class="mt-1 text-xs text-slate-500">프로젝트 참여율</p>
+            </div>
+            <div class="rounded-2xl border border-slate-200/70 bg-white/90 p-4 text-center shadow-soft backdrop-blur">
+              <p class="text-2xl font-bold text-sky-700">80+</p>
+              <p class="mt-1 text-xs text-slate-500">대규모 엔티티 관리 경험</p>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <!-- P2P Funding -->
+            <div class="rounded-2xl border border-slate-200/70 bg-white/90 p-5 shadow-soft backdrop-blur md:p-8">
+              <div class="mb-3 inline-flex rounded-full border px-2.5 py-1 text-sm font-semibold tracking-[0.12em] bg-sky-100 text-sky-700 border-sky-200">핀테크 · UI/UX 리뉴얼</div>
+              <h3 class="text-lg font-semibold tracking-tight text-slate-900">P2P 크라우드펀딩 플랫폼</h3>
+              <p class="mt-1 text-xs text-slate-400">P2P 대출 · 2019.12~2020.01 (UI/UX 리뉴얼)</p>
+              <div class="mt-3 doc-content">
+                <h4>프로젝트 개요</h4>
+                <p>운영 중인 P2P 크라우드펀딩 플랫폼의 UI/UX 전면 리뉴얼. 80+ 엔티티 + 330+ API 패턴 환경에서 데이터 연속성을 보장하면서 신규 디자인 시스템으로 전환.</p>
+                <h4>핵심 기능</h4>
+                <ul>
+                  <li>운영 중인 서비스의 무중단 UI/UX 리뉴얼</li>
+                  <li>Django + MySQL 기반 80+ 엔티티 관리</li>
+                  <li>NICE KYC, 가상계좌(Seyfert/PayGate), 4종 대출 유형</li>
+                  <li>3종 크론잡 운영 자동화 + 15+ 외부 API 연동</li>
+                </ul>
+                <h4>본 프로젝트와의 유사점</h4>
+                <p>본 프로젝트와 동일하게 <strong>운영 중인 서비스의 전면 리뉴얼</strong>로, 데이터 연속성과 사용자 경험 보존을 동시에 달성한 경험. MySQL 기반 대규모 데이터 정합성 검증 및 무중단 컷오버 노하우를 본 워드프레스 마이그레이션에 그대로 적용 가능.</p>
+                <h4>기술 스택</h4>
+                <div class="flex flex-wrap gap-1.5 not-prose">
+                  <span class="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-sm text-slate-500">Python</span>
+                  <span class="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-sm text-slate-500">Django</span>
+                  <span class="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-sm text-slate-500">MySQL</span>
+                  <span class="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-sm text-slate-500">jQuery</span>
+                  <span class="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-sm text-slate-500">AWS S3</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- EZ-Approve -->
+            <div class="rounded-2xl border border-slate-200/70 bg-white/90 p-5 shadow-soft backdrop-blur md:p-8">
+              <div class="mb-3 inline-flex rounded-full border px-2.5 py-1 text-sm font-semibold tracking-[0.12em] bg-sky-100 text-sky-700 border-sky-200">B2B SaaS · 전자결재</div>
+              <h3 class="text-lg font-semibold tracking-tight text-slate-900">전자결재 SaaS 플랫폼</h3>
+              <p class="mt-1 text-xs text-slate-400">기업용 SaaS · 2026.01~2026.03 (약 9주)</p>
+              <div class="mt-3 doc-content">
+                <h4>프로젝트 개요</h4>
+                <p>다단계 전자결재 엔진 + 실시간 공동편집 + Lexical 리치 에디터 기반 B2B SaaS. 50+ 페이지, 120-150 API, 34 엔티티, 7 사용자 역할, 6계층 보안.</p>
+                <h4>핵심 기능</h4>
+                <ul>
+                  <li>다단계 전자결재 엔진(8종 결재 액션) + RBAC(7 역할)</li>
+                  <li>Lexical 리치 에디터(170 파일, 26 커스텀 노드) — 콘텐츠 편집 경험</li>
+                  <li>실시간 공동편집(CRDT/Yjs), 토큰 기반 외부 셀프서비스 포탈</li>
+                  <li>다국어, 운영 매뉴얼, 관리자 시스템</li>
+                </ul>
+                <h4>본 프로젝트와의 유사점</h4>
+                <p>50+ 페이지 규모의 콘텐츠 관리 시스템과 <strong>관리자/실무자용 매뉴얼</strong> 산출물 작성 경험이 본 프로젝트의 워드프레스 관리자 매뉴얼 작성과 직접 매칭. Lexical 리치 에디터 기반 콘텐츠 편집 환경 구축 노하우는 워드프레스 블록 에디터(Gutenberg) 환경 최적화에 활용 가능.</p>
+                <h4>기술 스택</h4>
+                <div class="flex flex-wrap gap-1.5 not-prose">
+                  <span class="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-sm text-slate-500">NestJS</span>
+                  <span class="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-sm text-slate-500">Next.js</span>
+                  <span class="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-sm text-slate-500">TypeScript</span>
+                  <span class="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-sm text-slate-500">MySQL</span>
+                  <span class="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-sm text-slate-500">Lexical+Yjs</span>
+                  <span class="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-sm text-slate-500">Docker</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Series-B -->
+            <div class="rounded-2xl border border-slate-200/70 bg-white/90 p-5 shadow-soft backdrop-blur md:p-8">
+              <div class="mb-3 inline-flex rounded-full border px-2.5 py-1 text-sm font-semibold tracking-[0.12em] bg-sky-100 text-sky-700 border-sky-200">핀테크 · 대규모 데이터</div>
+              <h3 class="text-lg font-semibold tracking-tight text-slate-900">VC 펀드 관리 플랫폼</h3>
+              <p class="mt-1 text-xs text-slate-400">VC · 2023.11~2024.12 (14개월)</p>
+              <div class="mt-3 doc-content">
+                <h4>프로젝트 개요</h4>
+                <p>VC 펀드 라이프사이클 + AI 투자 보고서 자동 생성(ChatGPT) + VICS 규제 5종 양식 대응. 22 도메인 모듈, 80+ 엔티티, 200-300+ API, PR 1,652건.</p>
+                <h4>핵심 기능</h4>
+                <ul>
+                  <li>VC 펀드 라이프사이클 관리(GP/LP/스타트업)</li>
+                  <li>AI 투자 보고서 자동 생성(ChatGPT) — AI 친화 데이터 구조 설계</li>
+                  <li>NICE KYC, CRDT 실시간 공동편집, 5계층 보안+DLP+GeoIP</li>
+                  <li>50+ 페이지 운영 시스템</li>
+                </ul>
+                <h4>본 프로젝트와의 유사점</h4>
+                <p>80+ 엔티티 + 200-300+ API 규모의 <strong>대규모 데이터 정합성 관리</strong> 경험은 1,150건 포스팅 + 미디어 마이그레이션 검증에 직접 활용 가능. AI 보고서 자동 생성을 위한 <strong>AI 친화 구조화 데이터 설계 경험</strong>은 본 프로젝트의 AIEO(JSON-LD Schema) 설계와 직결됩니다.</p>
+                <h4>기술 스택</h4>
+                <div class="flex flex-wrap gap-1.5 not-prose">
+                  <span class="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-sm text-slate-500">Next.js</span>
+                  <span class="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-sm text-slate-500">NestJS</span>
+                  <span class="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-sm text-slate-500">MySQL</span>
+                  <span class="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-sm text-slate-500">Lexical/Yjs</span>
+                  <span class="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-sm text-slate-500">AWS</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-sky-200/70 bg-gradient-to-br from-sky-50 to-brand-50 p-6 text-center shadow-soft md:p-10">
+            <h2 class="text-xl font-bold tracking-tight text-slate-900 md:text-2xl">함께 만들어 가겠습니다</h2>
+            <p class="mx-auto mt-3 max-w-lg text-sm leading-7 text-slate-600">프로젝트에 대해 더 자세한 논의를 원하시면 미팅을 신청해 주세요. 고도화 후속 프로젝트 협의도 환영합니다.</p>
+          </div>
+        </div>
+
+        <!-- Bottom Page Navigation -->
+        <div id="page-nav" class="mt-6 flex items-center justify-between gap-4" style="display:none;">
+          <a id="nav-prev" href="#home"
+             class="group flex items-center gap-2 rounded-2xl border border-slate-200/70 bg-white/90 px-5 py-3 shadow-soft backdrop-blur transition hover:-translate-y-0.5 hover:border-sky-200 hover:bg-white">
+            <svg class="w-5 h-5 text-slate-400 transition group-hover:text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+            <span>
+              <span class="block text-xs text-slate-400">이전</span>
+              <span id="nav-prev-label" class="block text-sm font-semibold text-slate-700 group-hover:text-sky-700">홈</span>
+            </span>
+          </a>
+          <a id="nav-next" href="#overview"
+             class="group flex items-center gap-2 rounded-2xl border border-slate-200/70 bg-white/90 px-5 py-3 shadow-soft backdrop-blur transition hover:-translate-y-0.5 hover:border-sky-200 hover:bg-white text-right ml-auto">
+            <span>
+              <span class="block text-xs text-slate-400">다음</span>
+              <span id="nav-next-label" class="block text-sm font-semibold text-slate-700 group-hover:text-sky-700">프로젝트 소개</span>
+            </span>
+            <svg class="w-5 h-5 text-slate-400 transition group-hover:text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          </a>
+        </div>
+
+      </main>
+    </div>
+
+    <footer class="mt-10 border-t border-slate-200 pt-6 text-xs text-slate-500">
+      &copy; 2026 &middot; 본 제안서는 워드프레스 블로그 리뉴얼 및 데이터 마이그레이션 프로젝트를 위해 작성되었습니다.
+    </footer>
+  </div>
+
+  <script>
+    const pages = ['home', 'overview', 'estimate', 'manday', 'prd', 'timeline', 'portfolio'];
+    const pageLabels = {
+      home: '홈', overview: '프로젝트 소개', estimate: '견적서',
+      manday: '공수계산서', prd: 'PRD', timeline: '일정 제안', portfolio: '유사 프로젝트 경험'
+    };
+
+    function navigate(pageId) {
+      if (!pages.includes(pageId)) pageId = 'home';
+      document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active'));
+      const target = document.getElementById('page-' + pageId);
+      if (target) target.classList.add('active');
+      document.querySelectorAll('.nav-link').forEach(link => {
+        if (link.dataset.page === pageId) {
+          link.className = 'nav-link block rounded-xl border px-3 py-2 text-sm border-sky-200 bg-sky-50 font-medium text-sky-700';
+        } else {
+          link.className = 'nav-link block rounded-xl border border-transparent px-3 py-2 text-sm text-slate-600 hover:border-slate-200 hover:bg-slate-50 hover:text-slate-900';
+        }
+      });
+      updatePageNav(pageId);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      closeSidebar();
+    }
+
+    function updatePageNav(pageId) {
+      const nav = document.getElementById('page-nav');
+      const idx = pages.indexOf(pageId);
+      const prevBtn = document.getElementById('nav-prev');
+      const nextBtn = document.getElementById('nav-next');
+      const prevLabel = document.getElementById('nav-prev-label');
+      const nextLabel = document.getElementById('nav-next-label');
+
+      nav.style.display = (pageId === 'home') ? 'none' : 'flex';
+
+      if (idx > 0) {
+        prevBtn.href = '#' + pages[idx - 1];
+        prevLabel.textContent = pageLabels[pages[idx - 1]];
+        prevBtn.style.visibility = 'visible';
+      } else {
+        prevBtn.style.visibility = 'hidden';
+      }
+
+      if (idx < pages.length - 1) {
+        nextBtn.href = '#' + pages[idx + 1];
+        nextLabel.textContent = pageLabels[pages[idx + 1]];
+        nextBtn.style.visibility = 'visible';
+      } else {
+        nextBtn.style.visibility = 'hidden';
+      }
+    }
+
+    function closeSidebar() {
+      document.getElementById('sidebar').classList.remove('open');
+      document.getElementById('sidebar-backdrop').classList.remove('open');
+    }
+
+    function handleHash() {
+      const hash = (location.hash || '#home').replace('#', '');
+      navigate(hash);
+    }
+    window.addEventListener('hashchange', handleHash);
+    window.addEventListener('DOMContentLoaded', handleHash);
+
+    document.getElementById('sidebar-toggle').addEventListener('click', function() {
+      document.getElementById('sidebar').classList.toggle('open');
+      document.getElementById('sidebar-backdrop').classList.toggle('open');
+    });
+  </script>
+</body>
+</html>
